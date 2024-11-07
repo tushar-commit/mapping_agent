@@ -1,0 +1,10 @@
+{
+    "billing":          
+["BillingDate","CustomerID","Revenue","Store/SubAccountID","ProductID","InvoiceID","ContractID","ContractStartDate","ContractEndDate","RevenueProduct1","RevenueProduct2","RevenueProduct3","Currency","Quantity/Licenses","Pricing/Unit","Discount","BillingTerm","ProductFamily","M2M","Usage Amount","CreditsPurchased","ContractTerm"],
+
+    "usage":
+["UsageDate","ProductID","CustomerID","Number of Licenses Allotted","Number of Licenses Assigned","Number of Licenses Used","Number of Days Logged in","Usage Feature 1","Usage Feature 2","Usage Feature 3"],
+
+    "support":
+["TicketID","CustomerID","CurrentStatus","ProductID","TicketClosedDate","Severity","Priority","CaseType","ResolutionDate","ResolutionTime","EscalationStatus","EscalationTime","SatisfactionScore","TicketBody","TicketAssignedDate","TicketEscalationDate","TicketResolutionDate","TicketSubject"]
+}
