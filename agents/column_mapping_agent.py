@@ -21,7 +21,6 @@ class SFNColumnMappingAgent(SFNAgent):
         # Load standard columns configuration
         with open(standard_columns_path, 'r') as f:
             self.standard_columns = json.load(f)
-        print('>>self.standard_columns', self.standard_columns)
 
     def execute_task(self, task: Task) -> Dict[str, str]:
         """
@@ -59,7 +58,8 @@ class SFNColumnMappingAgent(SFNAgent):
         # Store context for validation
         self.task_context = {
             'input_columns': input_columns,
-            'standard_columns': standard_columns,
+            'mandatory_columns': self.standard_columns[category]['mandatory'],
+            'optional_columns': self.standard_columns[category]['optional'],
             'category': category
         }
         
@@ -68,7 +68,8 @@ class SFNColumnMappingAgent(SFNAgent):
             agent_type='column_mapper',
             llm_provider='openai',
             input_columns=input_columns,
-            standard_columns=standard_columns,
+            mandatory_columns=self.standard_columns[category]['mandatory'],
+            optional_columns=self.standard_columns[category]['optional'],
             category=category
         )
 
@@ -83,7 +84,6 @@ class SFNColumnMappingAgent(SFNAgent):
             n=self.model_config["n"],
             stop=self.model_config["stop"]
         )
-        print('>>response', response.choices[0].message.content.strip())
         # Parse and validate the mapping from the response
         mapping_str = response.choices[0].message.content.strip()
         return self._parse_mapping_response(mapping_str)
@@ -106,22 +106,20 @@ class SFNColumnMappingAgent(SFNAgent):
             if start_idx != -1 and end_idx != -1:
                 cleaned_str = cleaned_str[start_idx:end_idx + 1]
             
-            print('>>cleaned_str', cleaned_str)
             # Parse the cleaned JSON response
             raw_mapping = json.loads(cleaned_str)
-            print('>>raw_mapping', raw_mapping)
             # Clean and validate the mapping
             cleaned_mapping = {}
             
             # Get the category's standard columns
             category = self.task_context.get('category', '')
-            standard_columns = set(self.standard_columns.get(category, []))
-            print('>>standard_columns', standard_columns)
+            mandatory_columns = set(self.standard_columns[category]['mandatory'])
+            optional_columns = set(self.standard_columns[category]['optional'])
+            standard_columns = mandatory_columns.union(optional_columns)
+            
             # Get input DataFrame columns
             input_columns = set(self.task_context.get('input_columns', []))
             for mapped_col,input_col in raw_mapping.items():
-                print('>>mapped_col', mapped_col)
-                print('>>input_col', input_col)
                 # Skip null mappings
                 if mapped_col is None:
                     continue
@@ -133,12 +131,10 @@ class SFNColumnMappingAgent(SFNAgent):
                     
                 # Validate that mapped column exists in standard columns
                 if mapped_col not in standard_columns:
-                    print(f"Mapped column '{mapped_col}' not in standard columns for category {category}")
                     continue
                     
                 cleaned_mapping[mapped_col] = input_col
 
-            print('>>final cleaned_mapping', cleaned_mapping)
             return cleaned_mapping
                 
         except json.JSONDecodeError as e:
@@ -154,8 +150,7 @@ class SFNColumnMappingAgent(SFNAgent):
                     
                     # Apply the same validation as above
                     if input_col in input_columns and mapped_col in standard_columns:
-                        mapping[input_col] = mapped_col
-            print('>>final mappings returned', mapping)           
+                        mapping[input_col] = mapped_col           
             return mapping
             
 
@@ -168,16 +163,21 @@ class SFNColumnMappingAgent(SFNAgent):
         :return: Dictionary with mapping statistics
         """
         input_columns = set(self.task_context.get('input_columns', []))
-        standard_columns = set(self.task_context.get('standard_columns', []))
+        mandatory_columns = set(self.task_context.get('mandatory_columns', []))
+        optional_columns = set(self.task_context.get('optional_columns', []))
         
         mapped_inputs = set(mapping.keys())
         mapped_standards = set(mapping.values())
         
+        mapped_mandatory = set(col for col in mapped_standards if col in mandatory_columns)
+        
         return {
             'total_input_columns': len(input_columns),
-            'total_standard_columns': len(standard_columns),
+            'total_mandatory_columns': len(mandatory_columns),
+            'total_optional_columns': len(optional_columns),
             'mapped_input_columns': len(mapped_inputs),
-            'mapped_standard_columns': len(mapped_standards),
-            'unmapped_input_columns': len(input_columns - mapped_inputs),
-            'unmapped_standard_columns': len(standard_columns - mapped_standards)
+            'mapped_mandatory_columns': len(mapped_mandatory),
+            'mapped_optional_columns': len(mapped_standards - mapped_mandatory),
+            'unmapped_mandatory_columns': len(mandatory_columns - mapped_standards),
+            'unmapped_optional_columns': len(optional_columns - mapped_standards)
         }

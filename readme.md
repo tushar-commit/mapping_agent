@@ -54,29 +54,31 @@ streamlit run app.py```
 
 ## 🔄 Workflow
 
-1. **Data Loading**
+1. **Data Loading and Preview**
    - Upload your dataset (CSV, Excel, JSON, or Parquet)
    - Preview the loaded data
+   - Reset functionality available at any point
 
 2. **Category Identification**
-   - AI automatically identifies dataset category
-   - Options to confirm or override suggested category:
-     - Billing
-     - Usage
-     - Support
+   - AI automatically analyzes and suggests dataset category
+   - Options to:
+     - Confirm AI suggestion
+     - Select different category (Billing, Usage, Support)
 
 3. **Column Mapping**
    - AI suggests mappings based on standard columns
-   - Interactive review and modification of mappings
-   - Support for:
-     - Confirming suggested mappings
-     - Mapping additional columns
-     - Reviewing unmapped columns
+   - Interactive review and modification with:
+     - Visual indicators for mandatory columns (\#)
+     - Dropdown selection for each column mapping
+     - Option to map additional standard columns
+     - Validation for mandatory column mappings
+   - Mapping confirmation only possible after all mandatory columns are mapped
 
 4. **Post Processing**
-   - View mapped data
-   - Download processed dataset
-   - Review mapping summary
+   - Three operation options:
+     - View mapped data
+     - Download processed dataset (CSV format)
+     - Finish and reset application
 
 ## 🛠️ Architecture
 
