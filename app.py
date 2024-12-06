@@ -235,6 +235,7 @@ def run_app():
                     if view.display_button("Confirm Finish"):
                         view.show_message("Thank you for using the Column Mapping App!", "success")
                         session.clear()
-
+                        view.rerun_script()
+                        
 if __name__ == "__main__":
     run_app()
