@@ -4,4 +4,4 @@ myenv
 *.db.sqlite3-journal
 .pycache__
 *.pyc
-__pycache__
+__pycache__/

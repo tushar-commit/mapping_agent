@@ -102,11 +102,9 @@ def run_app():
                         'category': session.get('category')
                     })
                     column_mapping = mapping_agent.execute_task(mapping_task)
-                    print('>>column_mapping', column_mapping)
                     session.set('column_mapping', column_mapping)
                     logger.info("Column mapping generated")
 
-            print('>>outside column_mapping', session.get('column_mapping'))
             
             
             # Display and edit mappings
@@ -114,6 +112,10 @@ def run_app():
                 column_mapping = session.get('column_mapping')
                 standard_columns = list(column_mapping.keys())
                 mapped_std_cols = [col for col in standard_columns if column_mapping.get(col) is not None]
+                
+                # Get mandatory columns for the category
+                mapping_agent = SFNColumnMappingAgent()
+                mandatory_columns = mapping_agent.standard_columns[session.get('category')]['mandatory']
                 
                 view.show_message(f"""🎯 AI has suggested mappings for 
                                 **{len(mapped_std_cols)}** out of **{len(standard_columns)}** 
@@ -132,11 +134,15 @@ def run_app():
 
                 # First show and confirm recommended mappings
                 view.display_subheader("Review Suggested Mappings")
+                view.display_markdown("(# indicates mandatory standard columns mappings)")
+                
                 for std_col in mapped_std_cols:
+                    # Add asterisk for mandatory columns
+                    col_display = f"{std_col} #" if std_col in mandatory_columns else std_col
                     recommended_col = selected_mappings[std_col]
-                    options = [recommended_col] + [col for col in available_input_cols if col != recommended_col]
+                    options = [recommended_col] + [col for col in available_input_cols if col != recommended_col] + [None]
                     new_mapping = view.select_box(
-                        f"Standard Column: **{std_col}**",
+                        f"Standard Column: **{col_display}**",
                         options=options,
                         key=f"mapping_{std_col}"
                     )
@@ -155,8 +161,10 @@ def run_app():
 
                     if session.get('show_additional_mapping'):
                         for std_col in unmapped_std_cols:
+                            # Add asterisk for mandatory columns
+                            col_display = f"{std_col} #" if std_col in mandatory_columns else std_col
                             new_mapping = view.select_box(
-                                f"Standard Column: **{std_col}**",
+                                f"Standard Column: **{col_display}**",
                                 options=["None"] + available_input_cols,
                                 key=f"additional_mapping_{std_col}"
                             )
@@ -165,10 +173,24 @@ def run_app():
                                 selected_mappings[std_col] = new_mapping
                                 available_input_cols.remove(new_mapping)
 
-                if view.display_button("Confirm All Mappings"):
-                    view.show_message("✅ All mappings confirmed", "success")
-                    session.set('mapping_confirmed', True)
-                    view.rerun_script()
+                # Check for unmapped mandatory columns before confirmation
+                unmapped_mandatory = [col for col in mandatory_columns 
+                                    if selected_mappings.get(col) is None]
+                
+                # Show warning for unmapped mandatory columns
+                if unmapped_mandatory:
+                    warning_msg = "⚠️ Warning: The following mandatory columns are not mapped:\n" + \
+                                "\n".join([f"- {col}" for col in unmapped_mandatory])
+                    view.show_message(warning_msg, "warning")
+                    view.show_message("❗ Please map all mandatory columns before confirming.", "info")
+
+                # Only show confirm button if all mandatory columns are mapped
+                if not unmapped_mandatory:
+                    confirm_button = view.display_button("Confirm All Mappings")
+                    if confirm_button:
+                        view.show_message("✅ All mappings confirmed", "success")
+                        session.set('mapping_confirmed', True)
+                        view.rerun_script()
 
 
             # Step 4: Post Processing
@@ -178,7 +200,6 @@ def run_app():
                 # Show mapping summary before final confirmation
                 mapped_cols = sum(1 for v in selected_mappings.values() if v is not None)
                 total_std_cols = len(standard_columns)
-                print('>>mapped_cols', mapped_cols)
                 view.show_message(f"✅ {mapped_cols} Columns are mapped from Input data with Standard Columns", "success")
 
                 view.display_header("Step 4: Post Processing")
@@ -193,7 +214,6 @@ def run_app():
                 if session.get('final_df') is None:
                     mapped_df = session.get('df').copy()
                     mapping = {v: k for k, v in session.get('selected_mappings').items() if v is not None}
-                    print('>>mapping before renamingt', mapping)
                     mapped_df.rename(columns=mapping, inplace=True)
                     session.set('final_df', mapped_df)
 
@@ -215,6 +235,7 @@ def run_app():
                     if view.display_button("Confirm Finish"):
                         view.show_message("Thank you for using the Column Mapping App!", "success")
                         session.clear()
-
+                        view.rerun_script()
+                        
 if __name__ == "__main__":
     run_app()
