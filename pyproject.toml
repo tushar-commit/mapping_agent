@@ -20,4 +20,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/stepfnAI/mapping_agent" 
+Homepage = "https://github.com/stepfnAI/mapping_agent"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
